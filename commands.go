@@ -85,6 +85,11 @@ func main() {
 					Usage: "key to register after loading ontologies",
 					Value: "/migration/ontology",
 				},
+				cli.StringFlag{
+					Name:  "key-download",
+					Usage: "key to watch for download of ontologies",
+					Value: "/migration/download",
+				},
 			},
 		},
 		{

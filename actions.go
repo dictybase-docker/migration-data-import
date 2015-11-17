@@ -85,6 +85,21 @@ func OrganismAction(c *cli.Context) {
 
 func OntologiesAction(c *cli.Context) {
 	if hasEtcd(c) {
+		// watch for download key
+		if err := waitForEtcd(c.String("key-download"), c); err != nil {
+			log.WithFields(log.Fields{
+				"type": "ontology-loader",
+				"key":  c.String("key-download"),
+				"kind": "etcd-wait",
+			}).Fatal(err)
+		}
+		log.WithFields(log.Fields{
+			"type": "ontology-loader",
+			"key":  c.String("key-download"),
+			"kind": "etcd-wait",
+		}).Info("wait for key is over")
+
+		// watch for sqitch deploy key
 		if err := waitForEtcd(c.GlobalString("key-watch"), c); err != nil {
 			log.WithFields(log.Fields{
 				"type": "ontology-loader",
