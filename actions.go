@@ -116,11 +116,11 @@ func OntologiesAction(c *cli.Context) {
 
 	if definedPostgres(c) && definedChadoUser(c) {
 		dsn := getPostgresDsn(c)
-		ml, err := exec.LookPath("modware-loader")
+		ml, err := exec.LookPath("modware-load")
 		if err != nil {
 			log.WithFields(log.Fields{
 				"type": "binary-lookup",
-				"name": "modware-loader",
+				"name": "modware-load",
 			}).Fatal(err)
 		}
 		// load cv_property.obo for versioning
