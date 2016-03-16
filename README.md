@@ -1,4 +1,4 @@
-# Data manager
+# Data import
 This is a source repository for [docker](http://docker.io) image to run
 all data import tasks of dictybase overhaul project.
 
