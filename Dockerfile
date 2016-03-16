@@ -1,2 +1,2 @@
-FROM dictybase/modware-loader-golang:1.8.1
+FROM dictybase/modware-loader-golang
 MAINTAINER Siddhartha Basu<siddhartha-basu@northwestern.edu>
