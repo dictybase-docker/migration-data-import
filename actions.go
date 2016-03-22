@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
@@ -238,4 +239,23 @@ func LiteratureAction(c *cli.Context) {
 
 func ScAction(c *cli.Context) {
 
+}
+
+func definedPostgres(c *cli.Context) bool {
+	if len(c.GlobalString("pghost")) > 1 && len(c.GlobalString("pgport")) > 1 {
+		return true
+	}
+	return false
+}
+
+func definedChadoUser(c *cli.Context) bool {
+	if len(c.GlobalString("chado-user")) > 1 && len(c.GlobalString("chado-db")) > 1 && len(c.GlobalString("chado-pass")) > 1 {
+		return true
+	}
+	return false
+}
+
+func getPostgresDsn(c *cli.Context) string {
+	return fmt.Sprintf("dbi:Pg:host=%s;port=%s;database=%s", c.GlobalString("pghost"),
+		c.GlobalString("pgport"), c.GlobalString("chado-db"))
 }

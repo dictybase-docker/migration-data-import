@@ -1,12 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"os"
-	"regexp"
 
-	"github.com/coreos/etcd/client"
-	"golang.org/x/net/context"
 	"gopkg.in/codegangsta/cli.v1"
 )
 
@@ -142,81 +138,4 @@ func main() {
 		},
 	}
 	app.Run(os.Args)
-}
-
-func hasEtcd(c *cli.Context) bool {
-	if len(c.GlobalString("etcd-host")) > 1 && len(c.GlobalString("etcd-port")) > 1 {
-		return true
-	}
-	return false
-}
-
-func getEtcdURL(c *cli.Context) string {
-	return "http://" + c.GlobalString("etcd-host") + ":" + c.GlobalString("etcd-port")
-}
-
-func getEtcdAPIHandler(c *cli.Context) (client.KeysAPI, error) {
-	cfg := client.Config{
-		Endpoints: []string{getEtcdURL(c)},
-		Transport: client.DefaultTransport,
-	}
-	cl, err := client.New(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return client.NewKeysAPI(cl), nil
-}
-
-func waitForEtcd(key string, c *cli.Context) error {
-	api, err := getEtcdAPIHandler(c)
-	if err != nil {
-		return err
-	}
-	_, err = api.Get(context.Background(), key, nil)
-	if err != nil {
-		if m, _ := regexp.MatchString("100", err.Error()); m {
-			// key is not present have to watch it
-			w := api.Watcher(c.String("key-watch"), nil)
-			_, err := w.Next(context.Background())
-			if err != nil {
-				return err
-			}
-			return nil
-		} else {
-			return err
-		}
-	}
-	// key is already present
-	return nil
-}
-
-func registerWithEtcd(key string, c *cli.Context) error {
-	api, err := getEtcdAPIHandler(c)
-	if err != nil {
-		return err
-	}
-	_, err = api.Create(context.Background(), key, "complete")
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func definedPostgres(c *cli.Context) bool {
-	if len(c.GlobalString("pghost")) > 1 && len(c.GlobalString("pgport")) > 1 {
-		return true
-	}
-	return false
-}
-
-func definedChadoUser(c *cli.Context) bool {
-	if len(c.GlobalString("chado-user")) > 1 && len(c.GlobalString("chado-db")) > 1 && len(c.GlobalString("chado-pass")) > 1 {
-		return true
-	}
-	return false
-}
-
-func getPostgresDsn(c *cli.Context) string {
-	return fmt.Sprintf("dbi:Pg:host=%s;port=%s;database=%s", c.GlobalString("pghost"),
-		c.GlobalString("pgport"), c.GlobalString("chado-db"))
 }
