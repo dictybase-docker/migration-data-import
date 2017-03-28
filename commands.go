@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"gopkg.in/codegangsta/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func main() {
@@ -12,15 +12,20 @@ func main() {
 	app.Usage = "cli for various import subcommands"
 	app.Version = "1.0.0"
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:   "etcd-host",
-			EnvVar: "ETCD_CLIENT_SERVICE_HOST",
-			Usage:  "ip address of etcd instance",
+		cli.StringSliceFlag{
+			Name:  "hooks",
+			Usage: "hook names for sending log in addition to stderr",
+			Value: &cli.StringSlice{},
 		},
 		cli.StringFlag{
-			Name:   "etcd-port",
-			EnvVar: "ETCD_CLIENT_SERVICE_PORT",
-			Usage:  "port number of etcd instance",
+			Name:   "slack-channel",
+			EnvVar: "SLACK_CHANNEL",
+			Usage:  "Slack channel where the log will be posted",
+		},
+		cli.StringFlag{
+			Name:   "slack-url",
+			EnvVar: "SLACK_URL",
+			Usage:  "Slack webhook url[required if slack channel is provided]",
 		},
 		cli.StringFlag{
 			Name:   "chado-pass",
@@ -48,9 +53,24 @@ func main() {
 			Usage:  "postgresql port",
 		},
 		cli.StringFlag{
-			Name:  "key-watch",
-			Usage: "key to watch before start loading",
-			Value: "/migration/sqitch",
+			Name:  "s3-server",
+			Usage: "S3 server endpoint",
+			Value: "storage.googleapis.com",
+		},
+		cli.StringFlag{
+			Name:  "s3-bucket",
+			Usage: "S3 bucket where the import data is kept",
+			Value: "dictybase",
+		},
+		cli.StringFlag{
+			Name:   "access-key, akey",
+			EnvVar: "S3_ACCESS_KEY",
+			Usage:  "access key for S3 server, required based on command run",
+		},
+		cli.StringFlag{
+			Name:   "secret-key, skey",
+			EnvVar: "S3_SECRET_KEY",
+			Usage:  "secret key for S3 server, required based on command run",
 		},
 	}
 	app.Commands = []cli.Command{
@@ -60,33 +80,79 @@ func main() {
 			Action: OrganismAction,
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "key-register",
-					Usage: "key to register after loading organism",
-					Value: "/migration/organism",
+					Name:  "notify-channel",
+					Usage: "The postgresql channel to send notification after successful completion of loading",
+					Value: "organism-plus",
+				},
+				cli.StringFlag{
+					Name:  "payload",
+					Usage: "The payload for notification",
+					Value: "loaded",
 				},
 			},
 		},
 		{
-			Name:   "ontologies",
-			Usage:  "Import all ontologies",
-			Action: OntologiesAction,
+			Name:   "organism-plus",
+			Usage:  "Import additional organisms tied to stocks in stock center",
+			Action: OrganismPlusAction,
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "folder",
-					Usage: "data folder",
-					Value: "/data/ontology",
+					Name:  "input, i",
+					Usage: "full path where the data for import will be available",
+					Value: "/data/organism",
 				},
 				cli.StringFlag{
-					Name:  "key-register",
-					Usage: "key to register after loading ontologies",
-					Value: "/migration/ontology",
+					Name:  "remote-path, rp",
+					Usage: "full path(relative to the bucket) of s3 object which will be download",
+					Value: "import/strain_strain.tsv",
 				},
 				cli.StringFlag{
-					Name:  "key-download",
-					Usage: "key to watch for download of ontologies",
-					Value: "/migration/download",
+					Name:  "notify-channel",
+					Usage: "The postgresql channel to send notification after successful completion of loading",
+					Value: "organism-plus",
+				},
+				cli.StringFlag{
+					Name:  "payload",
+					Usage: "The payload for notification",
+					Value: "loaded",
+				},
+				cli.StringFlag{
+					Name:  "listen-channel",
+					Usage: "The postgresql channel to listen before start loading",
+					Value: "organism",
 				},
 			},
+		},
+		{
+			Name:   "onto",
+			Usage:  "Import one or more ontologies",
+			Action: ontoAction,
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "github, gh",
+					Usage: "Flag to retrieve all ontology files from dictybase github repo",
+				},
+				cli.BoolFlag{
+					Name:  "purl",
+					Usage: "Flag to retrieve all ontology files using purl url",
+				},
+				cli.StringSliceFlag{
+					Name:  "obo",
+					Usage: "Name on ontologies to load",
+					Value: &cli.StringSlice{},
+				},
+				cli.StringFlag{
+					Name:  "notify-channel",
+					Usage: "The postgresql channel to send notification after successful completion of loading",
+					Value: "ontology",
+				},
+				cli.StringFlag{
+					Name:  "payload",
+					Usage: "The payload for notification",
+					Value: "loaded",
+				},
+			},
+			Before: validateOnto,
 		},
 		{
 			Name:   "genomes",
@@ -96,7 +162,17 @@ func main() {
 				cli.StringFlag{
 					Name:  "folder",
 					Usage: "data folder",
-					Value: "/data/stockcenter",
+					Value: "/data/gff3",
+				},
+				cli.StringFlag{
+					Name:  "key-watch",
+					Usage: "key to watch before loading genomes",
+					Value: "/migration/ontology",
+				},
+				cli.StringFlag{
+					Name:  "key-register",
+					Usage: "key to register after loading genomes",
+					Value: "/migration/genomes",
 				},
 			},
 		},
@@ -130,12 +206,18 @@ func main() {
 			Action: ScAction,
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "folder",
-					Usage: "data folder",
+					Name:  "input, i",
+					Usage: "full path where the data for import will be available",
 					Value: "/data/stockcenter",
+				},
+				cli.StringFlag{
+					Name:  "remote-path, rp",
+					Usage: "full path(relative to the bucket) of s3 object which will be download",
+					Value: "import/stockcenter.tar.gz",
 				},
 			},
 		},
 	}
+	app.Before = validateArgs
 	app.Run(os.Args)
 }
