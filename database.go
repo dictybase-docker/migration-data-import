@@ -64,6 +64,14 @@ func getConnPoolConfig(c *cli.Context) (pgx.ConnPoolConfig, error) {
 	}, nil
 }
 
+func getConnPool(c *cli.Context) (*pgx.ConnPool, error) {
+	connConfig, err := getConnPoolConfig(c)
+	if err != nil {
+		return &pgx.ConnPool{}, err
+	}
+	return pgx.NewConnPool(connConfig)
+}
+
 func sendNotification(c *cli.Context, channel, payload string) error {
 	connConfig, err := getConnConfig(c)
 	if err != nil {

@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -39,6 +38,9 @@ type OntoFile struct {
 type contentFn func(string, chan<- *OntoFile)
 
 func validateOnto(c *cli.Context) error {
+	if err := validateArgs(c); err != nil {
+		return err
+	}
 	if len(c.StringSlice("obo")) == 0 {
 		cli.NewExitError("no obo file given", 2)
 	}
@@ -47,12 +49,6 @@ func validateOnto(c *cli.Context) error {
 
 func ontoAction(c *cli.Context) error {
 	log := getLogger(c)
-	cont, err := json.Marshal(
-		&Obo{Ontologies: c.StringSlice("obo")},
-	)
-	if err != nil {
-		return cli.NewExitError(err.Error(), 2)
-	}
 	conn, err := getConnection(c)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 2)
@@ -134,14 +130,6 @@ func ontoAction(c *cli.Context) error {
 			"commandline": strings.Join(pcmd, " "),
 		}).Info("ontology loaded successfully")
 	}
-	err = sendNotificationWithConn(conn, c.String("notify-channel"), string(cont))
-	if err != nil {
-		return cli.NewExitError(err.Error(), 2)
-	}
-	log.WithFields(logrus.Fields{
-		"type":    "postgresql notification",
-		"channel": c.String("notify-channel"),
-	}).Info("send")
 	return nil
 }
 

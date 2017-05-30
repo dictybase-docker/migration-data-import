@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -16,6 +17,15 @@ import (
 func validateArgs(c *cli.Context) error {
 	if !definedPostgres(c) && !definedChadoUser(c) {
 		return cli.NewExitError("no database information", 2)
+	}
+	return nil
+}
+
+func validateS3Args(c *cli.Context) error {
+	for _, p := range []string{"s3-server", "s3-bucket", "access-key", "secret-key"} {
+		if !c.IsSet(p) {
+			return cli.NewExitError(fmt.Sprintf("argument %s is missing", p), 2)
+		}
 	}
 	return nil
 }
@@ -89,4 +99,20 @@ func getS3Client(c *cli.Context) (*minio.Client, error) {
 		return s3Client, fmt.Errorf("unable create the client %s", err.Error())
 	}
 	return s3Client, nil
+}
+
+func fetchRemoteFile(c *cli.Context, name string) (string, error) {
+	s3Client, err := getS3Client(c)
+	if err != nil {
+		return "", err
+	}
+	tmpf, err := ioutil.TempFile("", name)
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(tmpf.Name())
+	if err := s3Client.FGetObject(c.GlobalString("s3-bucket"), c.String("remote-path"), tmpf.Name()); err != nil {
+		return "", fmt.Errorf("Unable to retrieve the object %s", err.Error(), 2)
+	}
+	return tmpf.Name(), nil
 }

@@ -78,48 +78,18 @@ func main() {
 			Name:   "organism",
 			Usage:  "Import organism",
 			Action: OrganismAction,
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "notify-channel",
-					Usage: "The postgresql channel to send notification after successful completion of loading",
-					Value: "organism-plus",
-				},
-				cli.StringFlag{
-					Name:  "payload",
-					Usage: "The payload for notification",
-					Value: "loaded",
-				},
-			},
+			Before: validateOrganism,
 		},
 		{
 			Name:   "organism-plus",
 			Usage:  "Import additional organisms tied to stocks in stock center",
 			Action: OrganismPlusAction,
+			Before: validateOrganismPlus,
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "input, i",
-					Usage: "full path where the data for import will be available",
-					Value: "/data/organism",
-				},
 				cli.StringFlag{
 					Name:  "remote-path, rp",
 					Usage: "full path(relative to the bucket) of s3 object which will be download",
 					Value: "import/strain_strain.tsv",
-				},
-				cli.StringFlag{
-					Name:  "notify-channel",
-					Usage: "The postgresql channel to send notification after successful completion of loading",
-					Value: "organism-plus",
-				},
-				cli.StringFlag{
-					Name:  "payload",
-					Usage: "The payload for notification",
-					Value: "loaded",
-				},
-				cli.StringFlag{
-					Name:  "listen-channel",
-					Usage: "The postgresql channel to listen before start loading",
-					Value: "organism",
 				},
 			},
 		},
@@ -140,16 +110,6 @@ func main() {
 					Name:  "obo",
 					Usage: "Name on ontologies to load",
 					Value: &cli.StringSlice{},
-				},
-				cli.StringFlag{
-					Name:  "notify-channel",
-					Usage: "The postgresql channel to send notification after successful completion of loading",
-					Value: "ontology",
-				},
-				cli.StringFlag{
-					Name:  "payload",
-					Usage: "The payload for notification",
-					Value: "loaded",
 				},
 			},
 			Before: validateOnto,
@@ -192,11 +152,12 @@ func main() {
 			Name:   "literature",
 			Usage:  "Import literature",
 			Action: LiteratureAction,
+			Before: validateLiterature,
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "folder",
-					Usage: "data folder",
-					Value: "/data/stockcenter",
+					Name:  "remote-path, rp",
+					Usage: "full path(relative to the bucket) of s3 object which will be download",
+					Value: "import/literature.tar.gz",
 				},
 			},
 		},
@@ -206,11 +167,6 @@ func main() {
 			Action: ScAction,
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "input, i",
-					Usage: "full path where the data for import will be available",
-					Value: "/data/stockcenter",
-				},
-				cli.StringFlag{
 					Name:  "remote-path, rp",
 					Usage: "full path(relative to the bucket) of s3 object which will be download",
 					Value: "import/stockcenter.tar.gz",
@@ -218,6 +174,5 @@ func main() {
 			},
 		},
 	}
-	app.Before = validateArgs
 	app.Run(os.Args)
 }
