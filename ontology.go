@@ -179,7 +179,11 @@ func oboDownload(cvp bool, c *cli.Context) (string, error) {
 }
 
 func purlContent(name string, ch chan<- *OntoFile) {
-	res, err := http.Get(fmt.Sprintf("%s/%s", purlBase, name))
+	url := fmt.Sprintf("%s/%s", purlBase, name)
+	if name == "ro-chado" {
+		url = fmt.Sprintf("%s/ro/subsets/%s", purlBase, name)
+	}
+	res, err := http.Get(url)
 	if err != nil {
 		ch <- &OntoFile{Error: err, Name: name}
 	} else {
