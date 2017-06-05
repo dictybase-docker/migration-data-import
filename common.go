@@ -116,3 +116,22 @@ func fetchRemoteFile(c *cli.Context, name string) (string, error) {
 	}
 	return tmpf.Name(), nil
 }
+
+func listFiles(dir string) ([]string, error) {
+	r, err := os.Open(dir)
+	if err != nil {
+		return []string{""}, err
+	}
+	defer r.Close()
+	entries, err := r.Readdir(-1)
+	if err != nil {
+		return []string{""}, err
+	}
+	var files []string
+	for _, f := range entries {
+		if !f.IsDir() {
+			files = append(files, filepath.Join(dir, f.Name()))
+		}
+	}
+	return files, nil
+}

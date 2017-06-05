@@ -44,12 +44,12 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:   "pghost",
-			EnvVar: "POSTGRES_SERVICE_HOST",
+			EnvVar: "CHADO_BACKEND_SERVICE_HOST",
 			Usage:  "postgresql host",
 		},
 		cli.StringFlag{
 			Name:   "pgport",
-			EnvVar: "POSTGRES_SERVICE_PORT",
+			EnvVar: "CHADO_BACKEND_SERVICE_PORT",
 			Usage:  "postgresql port",
 		},
 		cli.StringFlag{
