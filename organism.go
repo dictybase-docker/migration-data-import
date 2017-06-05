@@ -69,7 +69,7 @@ func OrganismPlusAction(c *cli.Context) error {
 	}
 	reader, err := os.Open(filename)
 	if err != nil {
-		return cli.NewExitError(err.Error(), 2)
+		return cli.NewExitError(fmt.Sprintf("error opening file %s %s", filename, err.Error()), 2)
 	}
 	defer reader.Close()
 

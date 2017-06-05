@@ -23,7 +23,7 @@ func validateArgs(c *cli.Context) error {
 
 func validateS3Args(c *cli.Context) error {
 	for _, p := range []string{"s3-server", "s3-bucket", "access-key", "secret-key"} {
-		if !c.IsSet(p) {
+		if len(c.GlobalString(p)) == 0 {
 			return cli.NewExitError(fmt.Sprintf("argument %s is missing", p), 2)
 		}
 	}
@@ -110,7 +110,7 @@ func fetchRemoteFile(c *cli.Context, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer os.Remove(tmpf.Name())
+	//defer os.Remove(tmpf.Name())
 	if err := s3Client.FGetObject(c.GlobalString("s3-bucket"), c.String("remote-path"), tmpf.Name()); err != nil {
 		return "", fmt.Errorf("Unable to retrieve the object %s", err.Error(), 2)
 	}
