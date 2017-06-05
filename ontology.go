@@ -132,11 +132,11 @@ func ontoAction(c *cli.Context) error {
 }
 
 func oboDownload(cvp bool, c *cli.Context) (string, error) {
-	var allObos []string
+	allObos := make([]string, 0)
 	if cvp {
-		allObos = c.StringSlice("obo")
+		allObos = append(allObos, c.StringSlice("obo")...)
 	} else {
-		allObos[0] = "cv_property"
+		allObos = append(allObos, "cv_property")
 		allObos = append(allObos, c.StringSlice("obo")...)
 	}
 	dir, err := ioutil.TempDir("", "obo")
