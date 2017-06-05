@@ -156,7 +156,7 @@ func oboDownload(cvp bool, c *cli.Context) (string, error) {
 	ch := make(chan *OntoFile, len(allObos))
 	for _, n := range allObos {
 		if n == "cv_property" {
-			go purlContent(fmt.Sprintf("%s.obo", n), ch)
+			go githubContent(fmt.Sprintf("%s.obo", n), ch)
 			continue
 		}
 		go fn(fmt.Sprintf("%s.obo", n), ch)
