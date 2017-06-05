@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -145,7 +143,7 @@ func oboDownload(cvp bool, c *cli.Context) (string, error) {
 	if err != nil {
 		return dir, err
 	}
-	defer os.RemoveAll(dir)
+	//defer os.RemoveAll(dir)
 	var fn contentFn
 	switch {
 	case c.Bool("purl"):
@@ -155,16 +153,15 @@ func oboDownload(cvp bool, c *cli.Context) (string, error) {
 	default:
 		return dir, fmt.Errorf("either of %s or %s download source has to be selected", "purl", "github")
 	}
-	ch := make(chan *OntoFile)
+	ch := make(chan *OntoFile, len(allObos))
 	for _, n := range allObos {
-		obo := bytes.NewBufferString(n)
-		_, err := obo.WriteString("obo")
-		if err != nil {
-			return dir, err
+		if n == "cv_property" {
+			go purlContent(fmt.Sprintf("%s.obo", n), ch)
+			continue
 		}
-		fn(obo.String(), ch)
+		go fn(fmt.Sprintf("%s.obo", n), ch)
 	}
-	for i := 0; i < len(c.StringSlice("obo")); i++ {
+	for i := 0; i < len(allObos); i++ {
 		file := <-ch
 		if file.Error != nil {
 			return dir, file.Error
