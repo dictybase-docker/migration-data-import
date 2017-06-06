@@ -19,7 +19,7 @@ import (
 const (
 	repository = "migration-data"
 	owner      = "dictyBase"
-	basePath   = "ontology"
+	basePath   = "ontologies"
 	purlBase   = "http://purl.obolibrary.org/obo"
 )
 
