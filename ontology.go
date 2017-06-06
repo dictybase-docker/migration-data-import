@@ -71,7 +71,7 @@ func ontoAction(c *cli.Context) error {
 		return cli.NewExitError(err.Error(), 2)
 	}
 	// load cv_property.obo for versioning
-	if cvp {
+	if !cvp {
 		pcmd := append(makeadhocOboCmd(c), filepath.Join(dir, "cv_property.obo"))
 		out, err := exec.Command(ml, pcmd...).CombinedOutput()
 		if err != nil {
@@ -247,7 +247,7 @@ func makeadhocOboCmd(c *cli.Context) []string {
 
 func makeOboCmd(c *cli.Context) []string {
 	return []string{
-		"ob2chado",
+		"obo2chado",
 		"--dsn",
 		getPostgresDsn(c),
 		"--user",
