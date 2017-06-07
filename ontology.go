@@ -17,10 +17,12 @@ import (
 )
 
 const (
-	repository = "migration-data"
-	owner      = "dictyBase"
-	basePath   = "ontologies"
-	purlBase   = "http://purl.obolibrary.org/obo"
+	repository   = "migration-data"
+	roRepository = "obo-relations"
+	owner        = "dictyBase"
+	basePath     = "ontologies"
+	roBasePath   = "subsets"
+	purlBase     = "http://purl.obolibrary.org/obo"
 )
 
 type Obo struct {
@@ -180,9 +182,6 @@ func oboDownload(cvp bool, c *cli.Context) (string, error) {
 
 func purlContent(name string, ch chan<- *OntoFile) {
 	url := fmt.Sprintf("%s/%s", purlBase, name)
-	if name == "ro-chado" {
-		url = fmt.Sprintf("%s/ro/subsets/%s", purlBase, name)
-	}
 	res, err := http.Get(url)
 	if err != nil {
 		ch <- &OntoFile{Error: err, Name: name}
@@ -196,13 +195,27 @@ func purlContent(name string, ch chan<- *OntoFile) {
 	}
 }
 
+func getRepository(name string) string {
+	if name == "ro-chado.obo" {
+		return roRepository
+	}
+	return repository
+}
+
+func getRepoPath(name string) string {
+	if name == "ro-chado.obo" {
+		return fmt.Sprintf("%s/%s", roBasePath, name)
+	}
+	return fmt.Sprintf("%s/%s", basePath, name)
+}
+
 func githubContent(name string, ch chan<- *OntoFile) {
 	client := github.NewClient(nil)
 	ct, _, _, err := client.Repositories.GetContents(
 		context.Background(),
 		owner,
-		repository,
-		fmt.Sprintf("%s/%s", basePath, name),
+		getRepository(name),
+		getRepoPath(name),
 		nil,
 	)
 	if err != nil {
