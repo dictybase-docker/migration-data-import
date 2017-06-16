@@ -72,6 +72,28 @@ func main() {
 			EnvVar: "S3_SECRET_KEY",
 			Usage:  "secret key for S3 server, required based on command run",
 		},
+		cli.BoolFlag{
+			Name:   "use-logfile",
+			EnvVar: "USE_LOG_FILE",
+			Usage:  "Instead of stderr, write the script(s) log to a file",
+		},
+		cli.StringFlag{
+			Name:   "remote-log-path",
+			EnvVar: "REMOTE_LOG_PATH",
+			Value:  "log/import-log.zip",
+			Usage:  "full path(relative to the bucket) of s3 object where all import log will be uploaded",
+		},
+		cli.StringFlag{
+			Name:   "local-log-path",
+			EnvVar: "LOCAL_LOG_PATH",
+			Value:  "/log",
+			Usage:  "local log folder",
+		},
+		cli.BoolFlag{
+			Name:   "upload-logfile",
+			EnvVar: "UPLOAD_LOG_FILE",
+			Usage:  "upload all log files(compressed) to a s3 bucket",
+		},
 	}
 	app.Commands = []cli.Command{
 		{

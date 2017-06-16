@@ -52,7 +52,10 @@ func LiteratureAction(c *cli.Context) error {
 	if err != nil {
 		return cli.NewExitError(fmt.Sprintf("error in untarring file %s", err), 2)
 	}
-	litcmd := makeLitImportCmd(c)
+	litcmd, err := makeLitImportCmd(c)
+	if err != nil {
+		return cli.NewExitError(fmt.Sprintf("error generating command line %s", err), 2)
+	}
 	files, err := listFiles(tmpDir)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 2)
@@ -94,8 +97,8 @@ func runLitCmd(cmd string, subCmd []string, wch chan<- cmdFeedback) {
 	wch <- fb
 }
 
-func makeLitImportCmd(c *cli.Context) []string {
-	return []string{
+func makeLitImportCmd(c *cli.Context) ([]string, error) {
+	cmd := []string{
 		"bibtex2chado",
 		"--dsn",
 		getPostgresDsn(c),
@@ -104,6 +107,14 @@ func makeLitImportCmd(c *cli.Context) []string {
 		"--password",
 		c.GlobalString("chado-pass"),
 		"--use_extended_layout",
-		"--input",
 	}
+
+	if c.GlobalBool("use-log-file") {
+		logf, err := getLogFileName(c, "bibtex2chado")
+		if err != nil {
+			return cmd, err
+		}
+		cmd = append(cmd, "--logfile", logf)
+	}
+	return append(cmd, "--input"), nil
 }

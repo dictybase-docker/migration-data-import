@@ -1,12 +1,29 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/johntdyer/slackrus"
 	"gopkg.in/urfave/cli.v1"
 )
+
+const layout = "2006-01-02_150405"
+
+func getLogFileName(c *cli.Context, prefix string) (string, error) {
+	logfolder := c.GlobalString("local-log-path")
+	if _, err := os.Stat(logfolder); os.IsNotExist(err) {
+		err = os.MkdirAll(logfolder, os.ModeDir)
+		if err != nil {
+			return "", err
+		}
+	}
+	logf := fmt.Sprintf("%s_%s.log", prefix, time.Now().Format(layout))
+	return filepath.Join(logfolder, logf), nil
+}
 
 func getLogger(c *cli.Context) *logrus.Logger {
 	log := logrus.New()

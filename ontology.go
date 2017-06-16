@@ -74,7 +74,11 @@ func ontoAction(c *cli.Context) error {
 	}
 	// load cv_property.obo for versioning
 	if !cvp {
-		pcmd := append(makeadhocOboCmd(c), filepath.Join(dir, "cv_property.obo"))
+		acmd, err := makeadhocOboCmd(c)
+		if err != nil {
+			return cli.NewExitError(fmt.Sprintf("unable to generate command %s", err), 2)
+		}
+		pcmd := append(acmd, filepath.Join(dir, "cv_property.obo"))
 		out, err := exec.Command(ml, pcmd...).CombinedOutput()
 		if err != nil {
 			log.WithFields(logrus.Fields{
@@ -105,7 +109,10 @@ func ontoAction(c *cli.Context) error {
 		}).Error(err)
 		return cli.NewExitError(err.Error(), 2)
 	}
-	obocmd := makeOboCmd(c)
+	obocmd, err := makeOboCmd(c)
+	if err != nil {
+		return cli.NewExitError(fmt.Sprintf("unable to generate command %s", err), 2)
+	}
 	for _, obo := range reader {
 		if obo.IsDir() {
 			continue
@@ -242,8 +249,8 @@ func iscvPropLoaded(conn *pgx.Conn) (bool, error) {
 	return true, nil
 }
 
-func makeadhocOboCmd(c *cli.Context) []string {
-	return []string{
+func makeadhocOboCmd(c *cli.Context) ([]string, error) {
+	cmd := []string{
 		"adhocobo2chado",
 		"--dsn",
 		getPostgresDsn(c),
@@ -251,15 +258,20 @@ func makeadhocOboCmd(c *cli.Context) []string {
 		c.GlobalString("chado-user"),
 		"--password",
 		c.GlobalString("chado-pass"),
-		"--log_level",
-		"debug",
 		"--include_metadata",
-		"--input",
 	}
+	if c.GlobalBool("use-log-file") {
+		logf, err := getLogFileName(c, "adhocobo2chado")
+		if err != nil {
+			return cmd, err
+		}
+		cmd = append(cmd, "--logfile", logf)
+	}
+	return append(cmd, "--input"), nil
 }
 
-func makeOboCmd(c *cli.Context) []string {
-	return []string{
+func makeOboCmd(c *cli.Context) ([]string, error) {
+	cmd := []string{
 		"obo2chado",
 		"--dsn",
 		getPostgresDsn(c),
@@ -267,8 +279,13 @@ func makeOboCmd(c *cli.Context) []string {
 		c.GlobalString("chado-user"),
 		"--password",
 		c.GlobalString("chado-pass"),
-		"--log_level",
-		"debug",
-		"--input",
 	}
+	if c.GlobalBool("use-log-file") {
+		logf, err := getLogFileName(c, "obo2chado")
+		if err != nil {
+			return cmd, err
+		}
+		cmd = append(cmd, "--logfile", logf)
+	}
+	return append(cmd, "--input"), nil
 }
