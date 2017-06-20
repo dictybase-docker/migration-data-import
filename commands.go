@@ -78,21 +78,10 @@ func main() {
 			Usage:  "Instead of stderr, write the script(s) log to a file",
 		},
 		cli.StringFlag{
-			Name:   "remote-log-path",
-			EnvVar: "REMOTE_LOG_PATH",
-			Value:  "log/import-log.zip",
-			Usage:  "full path(relative to the bucket) of s3 object where all import log will be uploaded",
-		},
-		cli.StringFlag{
 			Name:   "local-log-path",
 			EnvVar: "LOCAL_LOG_PATH",
 			Value:  "/log",
 			Usage:  "local log folder",
-		},
-		cli.BoolFlag{
-			Name:   "upload-logfile",
-			EnvVar: "UPLOAD_LOG_FILE",
-			Usage:  "upload all log files(compressed) to a s3 bucket",
 		},
 	}
 	app.Commands = []cli.Command{
@@ -192,6 +181,20 @@ func main() {
 					Name:  "remote-path, rp",
 					Usage: "full path(relative to the bucket) of s3 object which will be download",
 					Value: "import/stockcenter.tar.gz",
+				},
+			},
+		},
+		{
+			Name:   "upload-log",
+			Usage:  "Upload all log files(compressed) to a s3 bucket",
+			Action: UploadLogAction,
+			Before: validateUploadLog,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:   "remote-log-path",
+					EnvVar: "REMOTE_LOG_PATH",
+					Value:  "log",
+					Usage:  "full path(relative to the bucket) of s3 object where all import log will be uploaded",
 				},
 			},
 		},

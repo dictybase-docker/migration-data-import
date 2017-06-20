@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -117,6 +118,23 @@ func fetchRemoteFile(c *cli.Context, name string) (string, error) {
 	return tmpf.Name(), nil
 }
 
+func uploadLocalFile(c *cli.Context, file string) error {
+	s3Client, err := getS3Client(c)
+	if err != nil {
+		return err
+	}
+	_, err = s3Client.FPutObject(
+		c.GlobalString("s3-bucket"),
+		file,
+		filepath.Join(c.GlobalString("remote-log-path"), filepath.Base(file)),
+		"application/zip",
+	)
+	if err != nil {
+		return fmt.Errorf("unable to upload %s file %s", file, err)
+	}
+	return nil
+}
+
 func listFiles(dir string) ([]string, error) {
 	r, err := os.Open(dir)
 	if err != nil {
@@ -134,4 +152,35 @@ func listFiles(dir string) ([]string, error) {
 		}
 	}
 	return files, nil
+}
+
+func zipFiles(folder string, output string) error {
+	w, err := os.Create(output)
+	if err != nil {
+		return fmt.Errorf("unable to create zip file %s %s", output, err)
+	}
+	zw := zip.NewWriter(w)
+	files, err := listFiles(folder)
+	if err != nil {
+		return fmt.Errorf("unable to reader folder %s %s", folder, err)
+	}
+	for _, entry := range files {
+		zf, err := zw.Create(filepath.Base(entry))
+		if err != nil {
+			return fmt.Errorf("unable to create file %s %s", entry, err)
+		}
+		ct, err := ioutil.ReadFile(entry)
+		if err != nil {
+			return fmt.Errorf("unable to read file content %s %s", entry, err)
+		}
+		_, err = zf.Write(ct)
+		if err != nil {
+			return fmt.Errorf("unable to write content of file %s %s", entry, err)
+		}
+	}
+	err = w.Close()
+	if err != nil {
+		return fmt.Errorf("unable to close the zip writer %s", err)
+	}
+	return nil
 }
