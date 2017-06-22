@@ -163,7 +163,7 @@ func main() {
 			Name:   "literature",
 			Usage:  "Import literature",
 			Action: LiteratureAction,
-			Before: validateLiterature,
+			Before: validateCommon,
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "remote-path, rp",
@@ -175,12 +175,17 @@ func main() {
 		{
 			Name:   "stock-center",
 			Usage:  "Import all data related to stock center",
+			Before: validateCommon,
 			Action: ScAction,
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "remote-path, rp",
 					Usage: "full path(relative to the bucket) of s3 object which will be download",
 					Value: "import/stockcenter.tar.gz",
+				},
+				cli.BoolFlag{
+					Name:  "prune",
+					Usage: "clean all dsc records before loading",
 				},
 			},
 		},

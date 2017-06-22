@@ -15,6 +15,16 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
+func validateCommon(c *cli.Context) error {
+	if err := validateArgs(c); err != nil {
+		return err
+	}
+	if err := validateS3Args(c); err != nil {
+		return err
+	}
+	return nil
+}
+
 func validateArgs(c *cli.Context) error {
 	if !definedPostgres(c) && !definedChadoUser(c) {
 		return cli.NewExitError("no database information", 2)

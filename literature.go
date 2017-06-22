@@ -18,16 +18,6 @@ type cmdFeedback struct {
 	SubCmd string
 }
 
-func validateLiterature(c *cli.Context) error {
-	if err := validateArgs(c); err != nil {
-		return err
-	}
-	if err := validateS3Args(c); err != nil {
-		return err
-	}
-	return nil
-}
-
 func LiteratureAction(c *cli.Context) error {
 	log := getLogger(c)
 	mi, err := exec.LookPath("modware-import")
@@ -42,22 +32,41 @@ func LiteratureAction(c *cli.Context) error {
 	// fetch the literature archive file(from cloud storage)
 	filename, err := fetchRemoteFile(c, "literature")
 	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type": "remote-get",
+			"name": "input",
+		}).Error(err)
 		return cli.NewExitError(fmt.Sprintf("unable to fetch remote file %s ", err), 2)
 	}
-	tmpDir, err := ioutil.TempDir(os.TempDir(), "organism")
+	tmpDir, err := ioutil.TempDir(os.TempDir(), "litreature")
 	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type": "temp-dir",
+			"name": "input",
+		}).Error(err)
 		return cli.NewExitError(fmt.Sprintf("unable to create temp directory %s", err), 2)
 	}
 	err = untar(filename, tmpDir)
 	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type": "untar",
+			"name": "input",
+		}).Error(err)
 		return cli.NewExitError(fmt.Sprintf("error in untarring file %s", err), 2)
 	}
 	litcmd, err := makeLitImportCmd(c)
 	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type": "command-string",
+			"name": "bibtex2chado",
+		}).Error(err)
 		return cli.NewExitError(fmt.Sprintf("error generating command line %s", err), 2)
 	}
 	files, err := listFiles(tmpDir)
 	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type": "dir-lookup",
+		}).Error(err)
 		return cli.NewExitError(err.Error(), 2)
 	}
 
