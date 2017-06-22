@@ -18,6 +18,11 @@ func main() {
 			Value: &cli.StringSlice{},
 		},
 		cli.StringFlag{
+			Name:  "log-level",
+			Usage: "log level for the application",
+			Value: "error",
+		},
+		cli.StringFlag{
 			Name:   "slack-channel",
 			EnvVar: "SLACK_CHANNEL",
 			Usage:  "Slack channel where the log will be posted",
