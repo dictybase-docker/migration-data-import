@@ -3,20 +3,20 @@ load-organism:
 load-organism-plus: load-organism
 	app organism-plus
 load-so:
-	app onto --purl --use-log-file --obo so 
+	app --use-logfile onto --purl  --obo so 
 load-ro:
-	app onto --gh --use-log-file --obo ro-chado 
+	app onto --use-logfile --gh  --obo ro-chado 
 load-dicty-ontologies:
-	app onto --gh --use-log-file --obo dictyBase_literature --obo dicty_anatomy --obo dicty_assay \
+	app --use-logfile onto --gh --obo dictyBase_literature --obo dicty_anatomy --obo dicty_assay \
 		--obo dicty_environment --obo dicty_genetic_modifiction --obo dicty_mutagenesis_method \
 		--obo dicty_phenotypes --obo dicty_plasmid_inventory --obo dicty_plasmid_keywords \ 
 		--obo dicty_storage_condition --obo dicty_strain_characteristics --obo dicty_strain_inventory 
 
 load-literature:
-	app literature --use-log-file
+	app --use-logfile literature 
 
 load-dsc:
-	app stock-center --use-log-file --prune
+	app --use-logfile stock-center --prune
 
 upload-log:
 	app upload-log
