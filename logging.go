@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/johntdyer/slackrus"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/urfave/cli.v1"
 )
 
