@@ -100,7 +100,7 @@ func runStrainImport(c *cli.Context, tmpDir string, mainCmd string, log *logrus.
 				return cli.NewExitError(err.Error(), 2)
 			}
 			log.Debugf("logfile %s for data %s", logf, data)
-			rcmd = append(rcmd, "--logfile", logf)
+			rcmd = append(rcmd, "--logfile", logf, "--log_level", "info")
 		}
 		out, err := exec.Command(mainCmd, rcmd...).CombinedOutput()
 		if err != nil {
@@ -118,7 +118,7 @@ func runStrainImport(c *cli.Context, tmpDir string, mainCmd string, log *logrus.
 	pcmd := make([]string, len(cmd))
 	copy(pcmd, cmd)
 	pcmd = append(pcmd, "phenotype", "--dsc_phenotypes", filepath.Join(tmpDir, "DSC_phenotypes_import.tsv"))
-	if c.GlobalBool("use-log-file") {
+	if c.GlobalBool("use-logfile") {
 		logf, err := getLogFileName(c, "phenotype")
 		if err != nil {
 			log.WithFields(logrus.Fields{
@@ -128,7 +128,7 @@ func runStrainImport(c *cli.Context, tmpDir string, mainCmd string, log *logrus.
 			return cli.NewExitError(err.Error(), 2)
 		}
 		log.Debugf("logfile %s for data phenotype", logf)
-		pcmd = append(pcmd, "--logfile", logf)
+		pcmd = append(pcmd, "--logfile", logf, "--log_level", "info")
 	}
 	out, err := exec.Command(mainCmd, pcmd...).CombinedOutput()
 	if err != nil {
@@ -161,7 +161,7 @@ func runStrainPlasmidImport(c *cli.Context, tmpDir string, mainCmd string, log *
 			return cli.NewExitError(err.Error(), 2)
 		}
 		log.Debugf("logfile %s for data %s", logf, "plasmid")
-		spcmd = append(spcmd, "--logfile", logf)
+		spcmd = append(spcmd, "--logfile", logf, "--log_level", "info")
 	}
 	if err != nil {
 		log.WithFields(logrus.Fields{
@@ -196,7 +196,7 @@ func runPlasmidImport(c *cli.Context, tmpDir string, mainCmd string, log *logrus
 				return cli.NewExitError(err.Error(), 2)
 			}
 			log.Debugf("logfile %s for data %s", logf, data)
-			rcmd = append(rcmd, "--logfile", logf)
+			rcmd = append(rcmd, "--logfile", logf, "--log_level", "info")
 		}
 		out, err := exec.Command(mainCmd, rcmd...).CombinedOutput()
 		if err != nil {
@@ -224,7 +224,7 @@ func runPlasmidImport(c *cli.Context, tmpDir string, mainCmd string, log *logrus
 			return cli.NewExitError(err.Error(), 2)
 		}
 		log.Debugf("logfile %s for data %s", logf, "sequence")
-		scmd = append(scmd, "--logfile", logf)
+		scmd = append(scmd, "--logfile", logf, "--log_level", "info")
 	}
 	out, err := exec.Command(mainCmd, scmd...).CombinedOutput()
 	if err != nil {
