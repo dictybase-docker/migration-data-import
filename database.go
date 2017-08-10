@@ -1,9 +1,12 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 
-	"gopkg.in/jackc/pgx.v2"
+	"github.com/jackc/pgx"
+	_ "github.com/jackc/pgx/stdlib"
+	"gopkg.in/mgutz/dat.v1/sqlx-runner"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -95,4 +98,24 @@ func sendNotificationWithConn(conn *pgx.Conn, channel, payload string) error {
 		return err
 	}
 	return nil
+}
+
+func getPgWrapper(c *cli.Context) (*runner.DB, error) {
+	var dbh *runner.DB
+	h, err := getPgxDbHandler(c)
+	if err != nil {
+		return dbh, err
+	}
+	return runner.NewDB(h, "postgres"), nil
+}
+
+func getPgxDbHandler(c *cli.Context) (*sql.DB, error) {
+	cStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		c.GlobalString("chado-user"),
+		c.GlobalString("chado-pass"),
+		c.GlobalString("pghost"),
+		c.GlobalString("pgport"),
+		c.GlobalString("chado-db"),
+	)
+	return sql.Open("pgx", cStr)
 }

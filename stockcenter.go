@@ -1,16 +1,22 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
+	"gopkg.in/mgutz/dat.v1"
 	"gopkg.in/urfave/cli.v1"
 )
+
+const orderDateLayout = "2006-01-02 15:04:05"
 
 var strainData []string = []string{
 	"characteristics",
@@ -269,4 +275,203 @@ func makeStrainImportCmd(c *cli.Context, folder string) []string {
 		folder,
 		"--data",
 	}
+}
+
+func ScOrderAction(c *cli.Context) error {
+	log := getLogger(c)
+	tmpDir, err := fetchAndDecompress(c, log, "dscorder")
+	if err != nil {
+		return err
+	}
+	if err := loadOrders(c, tmpDir, log); err != nil {
+		return err
+	}
+	return nil
+}
+
+func loadOrders(c *cli.Context, tmpDir string, log *logrus.Logger) error {
+	strainOrderFile := filepath.Join(tmpDir, "stock_orders.csv")
+	handler, err := os.Open(strainOrderFile)
+	if err != nil {
+		log.Errorf("unable to open file %s", err)
+		return cli.NewExitError(
+			fmt.Sprintf("Unable to open file %s %s", strainOrderFile, err),
+			2,
+		)
+	}
+	defer handler.Close()
+	r := csv.NewReader(handler)
+	r.FieldsPerRecord = -1
+
+	dat.EnableInterpolation = true
+	// database connection
+	dbh, err := getPgWrapper(c)
+	if err != nil {
+		log.Errorf("unable to create database connection %s", err)
+		return cli.NewExitError(
+			fmt.Sprint("Unable to create database connection %s", err),
+			2,
+		)
+	}
+	tx, err := dbh.Begin()
+	if err != nil {
+		log.Errorf("error in starting transaction %s", err)
+		return cli.NewExitError(
+			fmt.Sprintf("error in starting transaction %s", err),
+			2,
+		)
+	}
+	defer tx.AutoRollback()
+	// delete all orders
+	resD, err := tx.DeleteFrom("stock_order").Exec()
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type":  "delete",
+			"table": "stock_order",
+		}).Error(err)
+		return cli.NewExitError(
+			fmt.Sprintf("error in deleting all user information %s", err),
+			2,
+		)
+	}
+	log.Infof("deleted %d records", resD.RowsAffected)
+	sItemOrderIbuilder := tx.InsertInto("stock_item_order").Columns("item_id", "order_id")
+	orderCounter := 0
+	for {
+		record, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Errorf("Unable to read from csv file %s", err)
+			return cli.NewExitError(
+				fmt.Sprintf("Unable to read from csv file %s", err),
+				2,
+			)
+		}
+		var userId int64
+		err = tx.Select("auth_user_id").From("auth_user").
+			Where("email = $1", record[1]).
+			QueryScalar(&userId)
+		if err != nil {
+			if err == dat.ErrNotFound {
+				log.Warnf("email %s not found", record[1])
+				continue
+			}
+			log.WithFields(logrus.Fields{
+				"type":  "select",
+				"value": "email",
+			}).Error(err)
+			return cli.NewExitError(
+				fmt.Sprintf("error in querying with email %s %s", record[1], err),
+				2,
+			)
+		}
+		t, err := time.Parse(orderDateLayout, record[0])
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"type": "date parsing",
+			}).Error(err)
+			return cli.NewExitError(
+				fmt.Sprintf("error in parsing date %s %s", record[0], err),
+				2,
+			)
+		}
+		stockOrder := &StockOrder{
+			UserID:    userId,
+			CreatedAt: dat.NullTimeFrom(t),
+		}
+		err = tx.InsertInto("stock_order").
+			Columns("user_id", "created_at").
+			Record(stockOrder).
+			Returning("stock_order_id").
+			QueryStruct(stockOrder)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"type":   "insert",
+				"record": strings.Join(record, ":"),
+			}).Error(err)
+			return cli.NewExitError(
+				fmt.Sprintf("error in inserting stock order %s ", err),
+				2,
+			)
+		}
+		orderCounter += 1
+		for _, item := range record[2:] {
+			var stockId int64
+			if strings.HasPrefix(item, "DBS") { // strain
+				err = tx.Select("stock_id").From("stock").
+					Where("uniquename = $1", item).
+					QueryScalar(&stockId)
+				if err != nil {
+					if err == dat.ErrNotFound {
+						log.Warnf("strain  %s not found", item)
+						continue
+					}
+					log.WithFields(logrus.Fields{
+						"type":  "select",
+						"item":  "strain id",
+						"value": item,
+					}).Error(err)
+					return cli.NewExitError(
+						fmt.Sprintf("error in querying with strain id  %s %s", item, err),
+						2,
+					)
+				}
+				sItemOrderIbuilder.Record(&StockItemOrder{
+					ItemID:  stockId,
+					OrderID: stockOrder.ID,
+				})
+			} else { // plasmid
+				err = tx.Select("stock_id").From("stock").
+					Where("name = $1", item).
+					QueryScalar(&stockId)
+				if err != nil {
+					if err == dat.ErrNotFound {
+						log.Warnf("plasmid %s not found", item)
+						continue
+					}
+					log.WithFields(logrus.Fields{
+						"type":  "select",
+						"value": item,
+						"item":  "plasmid id",
+					}).Error(err)
+					return cli.NewExitError(
+						fmt.Sprintf("error in querying with plasmid id  %s %s", item, err),
+						2,
+					)
+				}
+				sItemOrderIbuilder.Record(&StockItemOrder{
+					ItemID:  stockId,
+					OrderID: stockOrder.ID,
+				})
+			}
+		}
+	}
+	sIRes, err := sItemOrderIbuilder.Exec()
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type": "bulk insert",
+		}).Error(err)
+		return cli.NewExitError(
+			fmt.Sprintf("error in bulk insert in stock_item_order %s", err),
+			2,
+		)
+	}
+	err = tx.Commit()
+	if err != nil {
+		return cli.NewExitError(
+			fmt.Sprintf("error in commiting %s", err),
+			2,
+		)
+	}
+	log.WithFields(logrus.Fields{
+		"type":  "stock order",
+		"count": orderCounter,
+	}).Info("inserted stock order")
+	log.WithFields(logrus.Fields{
+		"type":  "stock item",
+		"count": sIRes.RowsAffected,
+	}).Info("inserted stock items")
+	return nil
 }

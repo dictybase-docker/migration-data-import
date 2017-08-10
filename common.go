@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	minio "github.com/minio/minio-go"
+	"github.com/sirupsen/logrus"
 
 	"gopkg.in/urfave/cli.v1"
 )
@@ -193,4 +194,37 @@ func zipFiles(folder string, output string) error {
 		return fmt.Errorf("unable to close the zip writer %s", err)
 	}
 	return nil
+}
+
+func fetchAndDecompress(c *cli.Context, log *logrus.Logger, name string) (string, error) {
+	filename, err := fetchRemoteFile(c, name)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type": "remote-get",
+			"name": "input",
+		}).Error(err)
+		return "", cli.NewExitError(fmt.Sprintf("unable to fetch remote file %s ", err), 2)
+	}
+	log.Infof("retrieved the remote file %s", filename)
+
+	tmpDir, err := ioutil.TempDir(os.TempDir(), name)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type": "temp-dir",
+			"name": "input",
+		}).Error(err)
+		return "", cli.NewExitError(fmt.Sprintf("unable to create temp directory %s", err), 2)
+	}
+	log.Debugf("create a temp folder %s", tmpDir)
+
+	err = untar(filename, tmpDir)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type": "untar",
+			"name": "input",
+		}).Error(err)
+		return "", cli.NewExitError(fmt.Sprintf("error in untarring file %s", err), 2)
+	}
+	log.Debugf("untar file %s in %s temp folder", filename, tmpDir)
+	return tmpDir, nil
 }

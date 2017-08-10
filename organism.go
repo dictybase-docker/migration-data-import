@@ -8,9 +8,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"gopkg.in/jackc/pgx.v2"
 	"gopkg.in/urfave/cli.v1"
 
+	"github.com/jackc/pgx"
 	"github.com/sirupsen/logrus"
 )
 

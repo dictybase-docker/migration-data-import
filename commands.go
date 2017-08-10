@@ -23,6 +23,11 @@ func main() {
 			Value: "error",
 		},
 		cli.StringFlag{
+			Name:  "log-format",
+			Usage: "format of the logging out, either of json or text",
+			Value: "text",
+		},
+		cli.StringFlag{
 			Name:   "slack-channel",
 			EnvVar: "SLACK_CHANNEL",
 			Usage:  "Slack channel where the log will be posted",
@@ -195,6 +200,19 @@ func main() {
 			},
 		},
 		{
+			Name:   "users",
+			Usage:  "load all dictybase users(colleagues)",
+			Before: validateCommon,
+			Action: userAction,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "remote-path, rp",
+					Usage: "full path(relative to the bucket) of s3 object which will be download",
+					Value: "import/users.tar.gz",
+				},
+			},
+		},
+		{
 			Name:   "upload-log",
 			Usage:  "Upload all log files(compressed) to a s3 bucket",
 			Action: UploadLogAction,
@@ -205,6 +223,19 @@ func main() {
 					EnvVar: "REMOTE_LOG_PATH",
 					Value:  "log",
 					Usage:  "full path(relative to the bucket) of s3 object where all import log will be uploaded",
+				},
+			},
+		},
+		{
+			Name:   "stock-center-orders",
+			Usage:  "Import all strains and plasmid orders",
+			Before: validateCommon,
+			Action: ScOrderAction,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "remote-path, rp",
+					Usage: "full path(relative to the bucket) of s3 object which will be download",
+					Value: "import/stockcenter.tar.gz",
 				},
 			},
 		},

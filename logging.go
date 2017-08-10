@@ -58,8 +58,15 @@ func zipFileName(prefix string) string {
 
 func getLogger(c *cli.Context) *logrus.Logger {
 	log := logrus.New()
-	log.Formatter = &logrus.JSONFormatter{
-		TimestampFormat: "02/Jan/2006:15:04:05",
+	switch c.GlobalString("log-format") {
+	case "text":
+		log.Formatter = &logrus.TextFormatter{
+			TimestampFormat: "02/Jan/2006:15:04:05",
+		}
+	case "json":
+		log.Formatter = &logrus.JSONFormatter{
+			TimestampFormat: "02/Jan/2006:15:04:05",
+		}
 	}
 	log.Out = os.Stderr
 	l := c.GlobalString("log-level")
@@ -77,11 +84,11 @@ func getLogger(c *cli.Context) *logrus.Logger {
 	}
 	// Set up hook
 	lh := make(logrus.LevelHooks)
-	for _, h := range c.StringSlice("hooks") {
+	for _, h := range c.GlobalStringSlice("hooks") {
 		switch h {
 		case "slack":
 			lh.Add(&slackrus.SlackrusHook{
-				HookURL:        c.String("slack-url"),
+				HookURL:        c.GlobalString("slack-url"),
 				AcceptedLevels: slackrus.LevelThreshold(log.Level),
 				IconEmoji:      ":skull:",
 			})
