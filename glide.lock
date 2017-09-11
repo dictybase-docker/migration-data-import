@@ -1,0 +1,88 @@
+hash: 4bdfc0046ca9287f0189af7838c492375ea488e2456ddb0a8e3a7ddb05bb8b96
+updated: 2017-09-11T18:28:57.716320392Z
+imports:
+- name: github.com/cenkalti/backoff
+  version: 61153c768f31ee5f130071d08fc82b85208528de
+- name: github.com/garyburd/redigo
+  version: b925df3cc15d8646e9b5b333ebaf3011385aba11
+  subpackages:
+  - internal
+  - redis
+- name: github.com/go-ini/ini
+  version: c787282c39ac1fc618827141a1f762240def08a3
+- name: github.com/google/go-github
+  version: 12126fbfe000a09047ebdeb2b5160be3af88ab9e
+  subpackages:
+  - github
+- name: github.com/google/go-querystring
+  version: 53e6ce116135b80d037921a7fdd5138cf32d7a8a
+  subpackages:
+  - query
+- name: github.com/jackc/pgx
+  version: 66918e80dfde8d5cb09af9aebf40e2cce2eb0cc0
+  subpackages:
+  - chunkreader
+  - internal/sanitize
+  - pgio
+  - pgproto3
+  - pgtype
+  - stdlib
+- name: github.com/jmoiron/sqlx
+  version: d9bd385d68c068f1fabb5057e3dedcbcbb039d0f
+  subpackages:
+  - reflectx
+- name: github.com/johntdyer/slack-go
+  version: 88736fd63eed11c942b478c3182bdd2f152971e5
+- name: github.com/johntdyer/slackrus
+  version: c5dccb95428c3e5d9fb9ea59def7606f064d7045
+- name: github.com/lib/pq
+  version: e42267488fe361b9dc034be7a6bffef5b195bceb
+  subpackages:
+  - oid
+- name: github.com/mgutz/logxi
+  version: aebf8a7d67ab4625e0fd4a665766fef9a709161b
+- name: github.com/mgutz/str
+  version: 968bf66e3da857419e4f6e71b2d5c9ae95682dc4
+- name: github.com/minio/go-homedir
+  version: 21304a94172ae3a09dee2cd86a12fb6f842138c7
+- name: github.com/minio/minio-go
+  version: 84539d76271caeffb7a1d5f058bd83c6449f8145
+  subpackages:
+  - pkg/credentials
+  - pkg/encrypt
+  - pkg/policy
+  - pkg/s3signer
+  - pkg/s3utils
+  - pkg/set
+- name: github.com/pkg/errors
+  version: 2b3a18b5f0fb6b4f9190549597d3f962c02bc5eb
+- name: github.com/pmylund/go-cache
+  version: a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0
+- name: github.com/satori/go.uuid
+  version: 5bf94b69c6b68ee1b541973bb8e1144db23a194b
+- name: github.com/sirupsen/logrus
+  version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+- name: golang.org/x/crypto
+  version: 74b34b9dd60829a9fcaf56a59e81c3877a8ecd2c
+  subpackages:
+  - ssh/terminal
+- name: golang.org/x/net
+  version: 66aacef3dd8a676686c7ae3716979581e8b03c47
+  subpackages:
+  - context
+- name: golang.org/x/sys
+  version: a5054c7c1385fd50d9394475365355a87a7873ec
+  subpackages:
+  - unix
+  - windows
+- name: gopkg.in/mgutz/dat.v1
+  version: f2918ee2c9dd12bc7f27302aa28333ffcabc24d2
+  subpackages:
+  - common
+  - kvs
+  - postgres
+  - reflectx
+  - sqlx-runner
+- name: gopkg.in/urfave/cli.v1
+  version: cfb38830724cc34fedffe9a2a29fb54fa9169cd1
+testImports: []
