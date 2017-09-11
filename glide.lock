@@ -1,5 +1,5 @@
-hash: 4bdfc0046ca9287f0189af7838c492375ea488e2456ddb0a8e3a7ddb05bb8b96
-updated: 2017-09-11T18:28:57.716320392Z
+hash: 7eadb5e183c0f5e900559a0c6facbfe038ad848f4d36544fa5bb78986020cb1a
+updated: 2017-09-11T19:35:05.763913623Z
 imports:
 - name: github.com/cenkalti/backoff
   version: 61153c768f31ee5f130071d08fc82b85208528de
@@ -39,8 +39,16 @@ imports:
   version: e42267488fe361b9dc034be7a6bffef5b195bceb
   subpackages:
   - oid
+- name: github.com/mattn/go-colorable
+  version: ad5389df28cdac544c99bd7b9161a0b5b6ca9d1b
+- name: github.com/mattn/go-isatty
+  version: fc9e8d8ef48496124e79ae0df75490096eccf6fe
+- name: github.com/mgutz/ansi
+  version: 9520e82c474b0a04dd04f8a40959027271bab992
 - name: github.com/mgutz/logxi
   version: aebf8a7d67ab4625e0fd4a665766fef9a709161b
+  subpackages:
+  - v1
 - name: github.com/mgutz/str
   version: 968bf66e3da857419e4f6e71b2d5c9ae95682dc4
 - name: github.com/minio/go-homedir
@@ -76,7 +84,7 @@ imports:
   - unix
   - windows
 - name: gopkg.in/mgutz/dat.v1
-  version: f2918ee2c9dd12bc7f27302aa28333ffcabc24d2
+  version: c2a5759ae4b0303a8bf640d01a85ae3acc02455d
   subpackages:
   - common
   - kvs
