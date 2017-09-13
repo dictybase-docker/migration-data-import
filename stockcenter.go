@@ -19,18 +19,18 @@ import (
 const orderDateLayout = "2006-01-02 15:04:05"
 
 var strainData []string = []string{
+	"inventory",
 	"characteristics",
 	"publications",
-	"inventory",
 	"props",
 	"parent",
 	"genotype",
 }
 
 var plasmidData []string = []string{
+	"inventory",
 	"publications",
 	"props",
-	"inventory",
 	"images",
 }
 
