@@ -23,12 +23,12 @@ RUN curl -fsSL "$GOLANG_DOWNLOAD_URL" -o golang.tar.gz \
 ENV GOPATH /go
 ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
 
-RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
+RUN mkdir -p "$GOPATH/src" "$GOPATH/src/app" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
 WORKDIR $GOPATH
 
-COPY . $GOPATH/src
+COPY . $GOPATH/src/app
 RUN go get -v github.com/Masterminds/glide \
-    && cd $GOPATH/src \
+    && cd $GOPATH/src/app \
     && glide install \
     && go build \
     && cp app /usr/local/go/bin/
