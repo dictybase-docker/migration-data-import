@@ -19,19 +19,19 @@ import (
 const orderDateLayout = "2006-01-02 15:04:05"
 
 var strainData []string = []string{
-	"inventory",
 	"characteristics",
 	"publications",
 	"props",
 	"parent",
 	"genotype",
+	"inventory",
 }
 
 var plasmidData []string = []string{
-	"inventory",
 	"publications",
 	"props",
 	"images",
+	"inventory",
 }
 
 type cmdFunc func(*cli.Context, string, string, *logrus.Logger) error
