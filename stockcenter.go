@@ -13,6 +13,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/mgutz/dat.v1"
+	sqlx "gopkg.in/mgutz/dat.v1/sqlx-runner"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -35,6 +36,184 @@ var plasmidData []string = []string{
 }
 
 type cmdFunc func(*cli.Context, string, string, *logrus.Logger) error
+
+var inventorySQL = `
+	SELECT DISTINCT stock.stock_id
+    FROM stock
+		JOIN stockprop sprop on stock.stock_id = sprop.stock_id
+		JOIN cvterm inventory on inventory.cvterm_id = sprop.type_id
+		JOIN  cv on cv.cv_id = inventory.cv_id
+		JOIN cvterm on cvterm.cvterm_id = stock.type_id
+		JOIN cv cv2 ON cv2.cv_id = cvterm.cv_id
+    WHERE cvterm.name IN('strain','plasmid')
+    AND cv2.name = 'dicty_stockcenter'
+	AND cv.name IN('strain_inventory','plasmid_inventory')
+		EXCEPT
+	SELECT stock.stock_id
+		FROM stock
+		JOIN cvterm cvt ON cvt.cvterm_id = stock.type_id
+		JOIN cv ON cv.cv_id = cvt.cv_id
+		JOIN stockprop sprop ON stock.stock_id = sprop.stock_id
+		JOIN cvterm inventory on inventory.cvterm_id = sprop.type_id
+		JOIN cv cv2 On cv2.cv_id = inventory.cv_id
+	WHERE cvt.name IN ('strain','plasmid')
+	AND cv.name = 'dicty_stockcenter'
+	AND inventory.name = 'is_available'
+	AND cv2.name = 'dicty_stockcenter'
+`
+
+func TagInventoryAction(c *cli.Context) error {
+	log := getLogger(c)
+	dat.EnableInterpolation = true
+	// database connection
+	dbh, err := getPgWrapper(c)
+	if err != nil {
+		log.Errorf("unable to create database connection %s", err)
+		return cli.NewExitError(
+			fmt.Sprint("Unable to create database connection %s", err),
+			2,
+		)
+	}
+	tx, err := dbh.Begin()
+	if err != nil {
+		log.Errorf("error in starting transaction %s", err)
+		return cli.NewExitError(
+			fmt.Sprintf("error in starting transaction %s", err),
+			2,
+		)
+	}
+	defer tx.AutoRollback()
+	cvtermId, err := findOrCreateCvterm(
+		"dicty_stockcenter",
+		"is_available",
+		tx,
+	)
+	if err != nil {
+		log.Errorf("error with cvterm finding %s", err)
+		return cli.NewExitError(err.Error(), 2)
+	}
+	var stockIds []int64
+	err = tx.SQL(inventorySQL).QuerySlice(&stockIds)
+	if err != nil {
+		if err == dat.ErrNotFound {
+			log.Info("all the stock inventories are tagged")
+			return nil
+		}
+		log.WithFields(logrus.Fields{
+			"type":  "select",
+			"value": "list of inventories",
+		}).Error(err)
+		return cli.NewExitError(
+			fmt.Sprintf("error in querying for list of inventories %s", err),
+			2,
+		)
+	}
+	if len(stockIds) == 0 {
+		log.Info("all the stock inventories are tagged")
+		return nil
+	}
+
+	insertBuilder := tx.InsertInto("stockprop").
+		Columns("type_id", "value", "stock_id")
+	expected := 0
+	for _, id := range stockIds {
+		insertBuilder.Record(&StockInventoryTag{
+			StockID: id,
+			TypeID:  cvtermId,
+			Value:   "1",
+		})
+		expected++
+	}
+	res, err := insertBuilder.Exec()
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type": "bulk insert",
+		}).Error(err)
+		return cli.NewExitError(
+			fmt.Sprintf("error in bulk insert in tagging stock inventories  %s", err),
+			2,
+		)
+	}
+	err = tx.Commit()
+	if err != nil {
+		return cli.NewExitError(
+			fmt.Sprintf("error in commiting %s", err),
+			2,
+		)
+	}
+	log.WithFields(logrus.Fields{
+		"type":     "bulk insert",
+		"expected": expected,
+		"count":    res.RowsAffected,
+	}).Info("inserted stock inventories")
+	return nil
+}
+
+func findOrCreateCvterm(cv string, cvterm string, tx *sqlx.Tx) (int64, error) {
+	var cvtermId int64
+	cvId, err := findCvId(cv, tx)
+	if err != nil {
+		return cvtermId, err
+	}
+	dbxrefId, err := findOrCreateDbxref("internal", cvterm, tx)
+	if err != nil {
+		return cvtermId, err
+	}
+	err = tx.Insect("cvterm").
+		Columns("name", "definition", "cv_id", "dbxref_id").
+		Values("is_available", "Model availability of stocks", cvId, dbxrefId).
+		Where("cv_id = $1 AND name = $2 and dbxref_id = $3", cvId, "is_available", dbxrefId).
+		Returning("cvterm_id").
+		QueryScalar(&cvtermId)
+	if err != nil {
+		return cvtermId, fmt.Errorf("error in finding or creating cvterm %s %s", cvterm, err)
+	}
+	return cvtermId, nil
+}
+
+func findOrCreateDbxref(db string, dbxref string, tx *sqlx.Tx) (int64, error) {
+	var dbxrefId int64
+	dbId, err := findDbId(db, tx)
+	if err != nil {
+		return dbId, err
+	}
+	err = tx.Insect("dbxref").
+		Columns("accession", "db_id").
+		Values(dbxref, dbId).
+		Where("db_id = $1 AND accession = $2", dbId, dbxref).
+		Returning("dbxref_id").
+		QueryScalar(&dbxrefId)
+	if err != nil {
+		return dbxrefId, fmt.Errorf("error in finding or creating dbxref %s %s", dbxref, err)
+	}
+	return dbxrefId, nil
+}
+
+func findCvId(cv string, tx *sqlx.Tx) (int64, error) {
+	var cvId int64
+	err := tx.Select("cv_id").From("cv").Where("name = $1", cv).QueryScalar(&cvId)
+	if err != nil {
+		if err == dat.ErrNotFound {
+			return cvId, fmt.Errorf("%s cvterm not found", cv)
+		}
+		return cvId, fmt.Errorf("select error %s", err)
+
+	}
+	return cvId, nil
+}
+
+func findDbId(db string, tx *sqlx.Tx) (int64, error) {
+	var dbId int64
+	err := tx.Select("db_id").From("db").Where("name = $1", db).QueryScalar(&dbId)
+	if err != nil {
+		if err == dat.ErrNotFound {
+			return dbId, fmt.Errorf("%s db name  not found", db)
+		}
+		return dbId, fmt.Errorf("select error %s", err)
+
+	}
+	return dbId, nil
+}
 
 func ScAction(c *cli.Context) error {
 	log := getLogger(c)
