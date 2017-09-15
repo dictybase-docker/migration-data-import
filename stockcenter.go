@@ -215,6 +215,77 @@ func findDbId(db string, tx *sqlx.Tx) (int64, error) {
 	return dbId, nil
 }
 
+func PrefixPlasmidAction(c *cli.Context) error {
+	log := getLogger(c)
+	dat.EnableInterpolation = true
+	// database connection
+	dbh, err := getPgWrapper(c)
+	if err != nil {
+		log.Errorf("unable to create database connection %s", err)
+		return cli.NewExitError(
+			fmt.Sprint("Unable to create database connection %s", err),
+			2,
+		)
+	}
+	tx, err := dbh.Begin()
+	if err != nil {
+		log.Errorf("error in starting transaction %s", err)
+		return cli.NewExitError(
+			fmt.Sprintf("error in starting transaction %s", err),
+			2,
+		)
+	}
+	defer tx.AutoRollback()
+	plasmidSQL := `SELECT stock.name,stock.stock_id from stock
+	JOIN cvterm ON cvterm.cvterm_id = stock.type_id
+	JOIN cv ON cv.cv_id = cvterm.cv_id
+	WHERE cvterm.name = 'plasmid'
+	AND cv.name = 'dicty_stockcenter'
+	AND stock.name !~ '^p'
+	`
+	var plasmids []*PlasmidName
+	err = tx.SQL(plasmidSQL).QueryStructs(&plasmids)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type":  "select",
+			"value": "list of plasmid",
+		}).Error(err)
+		return cli.NewExitError(
+			fmt.Sprintf("error in querying for list of plasmid %s", err),
+			2,
+		)
+	}
+	if len(plasmids) == 0 {
+		log.Info("all plasmids are prefixed with p")
+		return nil
+	}
+	count := 0
+	for _, p := range plasmids {
+		res, err := tx.Update("stock").
+			Set("name", "p"+p.Name).
+			Where("stock_id = $1", p.StockID).
+			Exec()
+		if err != nil {
+			log.Errorf("unable to prefix plasmid %s %s", p.Name, err)
+			cli.NewExitError(
+				fmt.Sprintf("unable to prefix plasmid %s %s", p.Name, err),
+				2,
+			)
+		}
+		count = count + int(res.RowsAffected)
+	}
+	err = tx.Commit()
+	if err != nil {
+		log.Errorf("error in commiting %s", err)
+		return cli.NewExitError(
+			fmt.Sprintf("error in commiting %s", err),
+			2,
+		)
+	}
+	log.Infof("updated %d records of %d plasmids", len(plasmids), count)
+	return nil
+}
+
 func ScAction(c *cli.Context) error {
 	log := getLogger(c)
 	mi, err := exec.LookPath("modware-import")
