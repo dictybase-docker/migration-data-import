@@ -86,10 +86,11 @@ func TagInventoryAction(c *cli.Context) error {
 	cvtermId, err := findOrCreateCvterm(
 		"dicty_stockcenter",
 		"is_available",
+		"Model availability of stocks",
 		tx,
 	)
 	if err != nil {
-		log.Errorf("error with cvterm finding %s", err)
+		log.Error(err)
 		return cli.NewExitError(err.Error(), 2)
 	}
 	var stockIds []int64
@@ -149,7 +150,7 @@ func TagInventoryAction(c *cli.Context) error {
 	return nil
 }
 
-func findOrCreateCvterm(cv string, cvterm string, tx *sqlx.Tx) (int64, error) {
+func findOrCreateCvterm(cv string, cvterm string, definition string, tx *sqlx.Tx) (int64, error) {
 	var cvtermId int64
 	cvId, err := findCvId(cv, tx)
 	if err != nil {
@@ -161,8 +162,8 @@ func findOrCreateCvterm(cv string, cvterm string, tx *sqlx.Tx) (int64, error) {
 	}
 	err = tx.Insect("cvterm").
 		Columns("name", "definition", "cv_id", "dbxref_id").
-		Values("is_available", "Model availability of stocks", cvId, dbxrefId).
-		Where("cv_id = $1 AND name = $2 and dbxref_id = $3", cvId, "is_available", dbxrefId).
+		Values(cvterm, definition, cvId, dbxrefId).
+		Where("cv_id = $1 AND name = $2 and dbxref_id = $3", cvId, cvterm, dbxrefId).
 		Returning("cvterm_id").
 		QueryScalar(&cvtermId)
 	if err != nil {
@@ -283,6 +284,92 @@ func PrefixPlasmidAction(c *cli.Context) error {
 		)
 	}
 	log.Infof("updated %d records of %d plasmids", len(plasmids), count)
+	return nil
+}
+
+func BacterialStrainAction(c *cli.Context) error {
+	log := getLogger(c)
+	dat.EnableInterpolation = true
+	// database connection
+	dbh, err := getPgWrapper(c)
+	if err != nil {
+		log.Errorf("unable to create database connection %s", err)
+		return cli.NewExitError(
+			fmt.Sprint("Unable to create database connection %s", err),
+			2,
+		)
+	}
+	tx, err := dbh.Begin()
+	if err != nil {
+		log.Errorf("error in starting transaction %s", err)
+		return cli.NewExitError(
+			fmt.Sprintf("error in starting transaction %s", err),
+			2,
+		)
+	}
+	defer tx.AutoRollback()
+	cvtermId, err := findOrCreateCvterm(
+		"dicty_stockcenter",
+		"bacterial_strain",
+		"Separate bacterial strain(food source) from ameoba strains",
+		tx,
+	)
+	if err != nil {
+		log.Error(err)
+		return cli.NewExitError(err.Error(), 2)
+	}
+	strainSQL := `SELECT stock.stock_id from stock
+	JOIN stock_cvterm scvt On scvt.stock_id = stock.stock_id
+	JOIN cvterm chr ON chr.cvterm_id = scvt.cvterm_id
+	JOIN cv scv ON scv.cv_id = chr.cv_id
+	JOIN cvterm cvt ON cvt.cvterm_id = stock.type_id
+	JOIN cv ON cvt.cv_id = cv.cv_id
+	WHERE scv.name = 'strain_characteristics'
+	AND cv.name = 'dicty_stockcenter'
+	AND cvt.name = 'strain'
+	AND chr.name = 'bacterial food source'
+	`
+	var ids []int64
+	err = tx.SQL(strainSQL).QuerySlice(&ids)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type":  "select",
+			"value": "list of strains",
+			"query": "bacterial source",
+		}).Error(err)
+		return cli.NewExitError(
+			fmt.Sprintf("error in querying for list of strains with bacterial source  %s", err),
+			2,
+		)
+	}
+	if len(ids) == 0 {
+		log.Info("no strains with bacterial food source characteristics")
+		return nil
+	}
+	count := 0
+	for _, id := range ids {
+		res, err := tx.Update("stock").
+			Set("type_id", cvtermId).
+			Where("stock_id = $1", id).
+			Exec()
+		if err != nil {
+			log.Errorf("unable to change to %s %s", "bacterial_strain", err)
+			cli.NewExitError(
+				fmt.Sprintf("unable to change to %s %s", "bacterial_strain", err),
+				2,
+			)
+		}
+		count = count + int(res.RowsAffected)
+	}
+	err = tx.Commit()
+	if err != nil {
+		log.Errorf("error in commiting %s", err)
+		return cli.NewExitError(
+			fmt.Sprintf("error in commiting %s", err),
+			2,
+		)
+	}
+	log.Infof("expected:%d records loaded:%d bacterial_strain", len(ids), count)
 	return nil
 }
 
