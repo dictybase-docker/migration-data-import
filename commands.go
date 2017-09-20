@@ -239,6 +239,37 @@ func main() {
 				},
 			},
 		},
+		{
+			Name:   "tag-inventory",
+			Usage:  "Add an ontology term to model the availability of items in dsc",
+			Before: validateCommon,
+			Action: TagInventoryAction,
+		},
+		{
+			Name:   "plasmid-prefix",
+			Usage:  "Add lower case p to missing plasmid names",
+			Before: validateCommon,
+			Action: PrefixPlasmidAction,
+		},
+		{
+			Name:   "bacterial-strain",
+			Usage:  "Separate bacterial strains from ameoba strains",
+			Before: validateCommon,
+			Action: BacterialStrainAction,
+		},
+		{
+			Name:   "annotation-assignments",
+			Usage:  "Assign user assignments to strain and plasmid annotations",
+			Before: validateCommon,
+			Action: LoadAnnotationAssignment,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "remote-path, rp",
+					Usage: "full path(relative to the bucket) of s3 object which will be download",
+					Value: "import/stockcenter.tar.gz",
+				},
+			},
+		},
 	}
 	app.Run(os.Args)
 }

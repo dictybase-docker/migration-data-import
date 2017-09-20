@@ -62,6 +62,81 @@ var inventorySQL = `
 	AND cv2.name = 'dicty_stockcenter'
 `
 
+var annotators = map[string]*User{
+	"jf": &User{
+		FirstName: "Jakob",
+		LastName:  "Franke",
+		Email:     "jf31@columbia.edu",
+		IsActive:  false,
+	},
+	"CGM_DDB_JAKOB": &User{
+		FirstName: "Jakob",
+		LastName:  "Franke",
+		Email:     "jf31@columbia.edu",
+		IsActive:  false,
+	},
+	"CGM_DDB_PASC": &User{
+		FirstName: "Pascale",
+		LastName:  "Gaudet",
+		Email:     "pgaudet@northwestern.edu",
+		IsActive:  false,
+	},
+	"CGM_DDB_STEPHY": &User{
+		FirstName: "Jakob",
+		LastName:  "Franke",
+		Email:     "jf31@columbia.edu",
+		IsActive:  false,
+	},
+	"ah": &User{
+		FirstName: "Jakob",
+		LastName:  "Franke",
+		Email:     "jf31@columbia.edu",
+		IsActive:  false,
+	},
+	"sm": &User{
+		FirstName: "Jakob",
+		LastName:  "Franke",
+		Email:     "jf31@columbia.edu",
+		IsActive:  false,
+	},
+	"CGM_DDB_MARC": &User{
+		FirstName: "Marc",
+		LastName:  "Vincelli",
+		Email:     "m-vincelli@northwestern.edu",
+		IsActive:  false,
+	},
+	"CGM_DDB_PFEY": &User{
+		FirstName: "Petra",
+		LastName:  "Fey",
+		Email:     "pfey@northwestern.edu",
+		IsActive:  true,
+	},
+	"CGM_DDB_BOBD": &User{
+		FirstName: "Robert",
+		LastName:  "Dodson",
+		Email:     "robert-dodson@northwestern.edu",
+		IsActive:  true,
+	},
+	"CGM_DDB_KPIL": &User{
+		FirstName: "Karen",
+		LastName:  "Kestin",
+		Email:     "kpilchar@northwestern.edu",
+		IsActive:  false,
+	},
+	"CGM_DDB": &User{
+		FirstName: "Dictybase",
+		LastName:  "Robot",
+		Email:     "dictybase@northwestern.edu",
+		IsActive:  true,
+	},
+	"CGM_DDB_KERRY": &User{
+		FirstName: "Kerry",
+		LastName:  "Sheppard",
+		Email:     "ksheppard@northwestern.edu",
+		IsActive:  false,
+	},
+}
+
 func TagInventoryAction(c *cli.Context) error {
 	log := getLogger(c)
 	dat.EnableInterpolation = true
@@ -623,6 +698,235 @@ func ScOrderAction(c *cli.Context) error {
 	if err := loadOrders(c, tmpDir, log); err != nil {
 		return err
 	}
+	return nil
+}
+
+func LoadAnnotationAssignment(c *cli.Context) error {
+	log := getLogger(c)
+	filename, err := fetchRemoteFile(c, "dsc")
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type": "remote-get",
+			"name": "input",
+		}).Error(err)
+		return cli.NewExitError(fmt.Sprintf("unable to fetch remote file %s ", err), 2)
+	}
+	log.Infof("retrieved the remote file %s", filename)
+
+	tmpDir, err := ioutil.TempDir(os.TempDir(), "dsc")
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type": "temp-dir",
+			"name": "input",
+		}).Error(err)
+		return cli.NewExitError(fmt.Sprintf("unable to create temp directory %s", err), 2)
+	}
+	log.Debugf("create a temp folder %s", tmpDir)
+
+	err = untar(filename, tmpDir)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type": "untar",
+			"name": "input",
+		}).Error(err)
+		return cli.NewExitError(fmt.Sprintf("error in untarring file %s", err), 2)
+	}
+	log.Debugf("untar file %s in %s temp folder", filename, tmpDir)
+
+	strainInput := filepath.Join(tmpDir, "strain_user_annotations.csv")
+	stHandler, err := os.Open(strainInput)
+	if err != nil {
+		log.Errorf("unable to open file %s", err)
+		return cli.NewExitError(
+			fmt.Sprintf("Unable to open file %s %s", strainInput, err),
+			2,
+		)
+	}
+	defer stHandler.Close()
+	plInput := filepath.Join(tmpDir, "plasmid_user_annotations.csv")
+	plHandler, err := os.Open(plInput)
+	if err != nil {
+		log.Errorf("unable to open file %s %s", plInput, err)
+		return cli.NewExitError(
+			fmt.Sprintf("Unable to open file %s %s", plInput, err),
+			2,
+		)
+	}
+	defer plHandler.Close()
+	multiR := io.MultiReader(stHandler, plHandler)
+	r := csv.NewReader(multiR)
+	r.FieldsPerRecord = -1
+
+	dat.EnableInterpolation = true
+	// database connection
+	dbh, err := getPgWrapper(c)
+	if err != nil {
+		log.Errorf("unable to create database connection %s", err)
+		return cli.NewExitError(
+			fmt.Sprint("Unable to create database connection %s", err),
+			2,
+		)
+	}
+	tx, err := dbh.Begin()
+	if err != nil {
+		log.Errorf("error in starting transaction %s", err)
+		return cli.NewExitError(
+			fmt.Sprintf("error in starting transaction %s", err),
+			2,
+		)
+	}
+	defer tx.AutoRollback()
+	for _, user := range annotators {
+		var id int64
+		err = tx.SQL(
+			upSertUser,
+			user.Email,
+			user.FirstName,
+			user.LastName,
+			user.IsActive,
+		).QueryScalar(&id)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"type":  "upsert",
+				"field": "email",
+				"value": user.Email,
+			}).Error(err)
+			return cli.NewExitError(
+				fmt.Sprintf("error in upserting record %s with email", err, user.Email),
+				2,
+			)
+		}
+		user.ID = id
+	}
+	insertBuilder := tx.InsertInto("stock_user_annotation").
+		Columns("stock_id",
+			"created_user_id",
+			"modified_user_id",
+			"created_at",
+			"updated_at",
+		)
+
+	counter := 0
+	for {
+		record, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Errorf("Unable to read from csv file %s", err)
+			return cli.NewExitError(
+				fmt.Sprintf("Unable to read from csv file %s", err),
+				2,
+			)
+		}
+		var stockId int64
+		err = tx.Select("stock_id").From("stock").
+			Where("uniquename = $1", record[0]).
+			QueryScalar(&stockId)
+		if err != nil {
+			if err == dat.ErrNotFound {
+				log.Warnf("stock %s not found", record[0])
+				continue
+			}
+			log.WithFields(logrus.Fields{
+				"type":  "select",
+				"value": "uniquename",
+			}).Error(err)
+			return cli.NewExitError(
+				fmt.Sprintf("error in querying with stock %s %s", record[0], err),
+				2,
+			)
+		}
+		// check for user
+		name := record[1]
+		if strings.Contains(record[1], ";") {
+			values := strings.Split(record[1], ";")
+			name = values[0]
+		}
+		if _, ok := annotators[name]; !ok {
+			log.Warnf("unknown annotator in the file %s skipping", name)
+			continue
+		}
+		// parse both dates
+		createdOn, err := time.Parse(orderDateLayout, record[2])
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"type": "date parsing",
+			}).Error(err)
+			return cli.NewExitError(
+				fmt.Sprintf("error in parsing date created %s %s", record[2], err),
+				2,
+			)
+		}
+		modifiedOn, err := time.Parse(orderDateLayout, record[3])
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"type": "date parsing",
+			}).Error(err)
+			return cli.NewExitError(
+				fmt.Sprintf("error in parsing date modified %s %s", record[3], err),
+				2,
+			)
+		}
+		// now check if this record exist
+		var annoId int64
+		err = tx.Select("stock_user_annotation_id").
+			From("stock_user_annotation").
+			Where("stock_id = $1 AND created_user_id = $2 and created_at = $3",
+				stockId, annotators[name].ID, createdOn,
+			).QueryScalar(&annoId)
+		if err != nil {
+			if err == dat.ErrNotFound {
+				insertBuilder.Record(&StockUserAnnotation{
+					StockID:    stockId,
+					CreatedBy:  annotators[name].ID,
+					ModifiedBy: annotators[name].ID,
+					CreatedAt:  createdOn,
+					ModifiedAt: modifiedOn,
+				})
+				counter++
+				continue
+			}
+			log.WithFields(logrus.Fields{
+				"type": "select",
+				"kind": "stock_user_annotation_id",
+			}).Error(err)
+			return cli.NewExitError(
+				fmt.Sprintf("error in querying with stock user annotation %s %s", strings.Join(record, " "), err),
+				2,
+			)
+		} else {
+			log.Debugf("record %s exists", strings.Join(record, " "))
+		}
+	}
+	if counter == 0 { // no new record
+		log.Info("no new record to load")
+		return nil
+	}
+
+	res, err := insertBuilder.Exec()
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"type": "bulk insert",
+			"kind": "assignment of user annotations",
+		}).Error(err)
+		return cli.NewExitError(
+			fmt.Sprintf("error in bulk insert of user annotation assignment %s", err),
+			2,
+		)
+	}
+	err = tx.Commit()
+	if err != nil {
+		return cli.NewExitError(
+			fmt.Sprintf("error in commiting %s", err),
+			2,
+		)
+	}
+	log.WithFields(logrus.Fields{
+		"type":      "bulk insert",
+		"processed": counter,
+		"inserted":  res.RowsAffected,
+	}).Info("inserted assignment of user annotations")
 	return nil
 }
 

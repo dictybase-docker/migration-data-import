@@ -1,6 +1,10 @@
 package main
 
-import "gopkg.in/mgutz/dat.v1"
+import (
+	"time"
+
+	"gopkg.in/mgutz/dat.v1"
+)
 
 type StockOrder struct {
 	ID        int64        `db:"stock_order_id"`
@@ -12,6 +16,25 @@ type StockItemOrder struct {
 	ID      int64 `db:"stock_item_order_id"`
 	ItemID  int64 `db:"item_id"`
 	OrderID int64 `db:"order_id"`
+}
+
+type StockInventoryTag struct {
+	StockID int64  `db:"stock_id"`
+	TypeID  int64  `db:"type_id"`
+	Value   string `db:"value"`
+}
+
+type StockUserAnnotation struct {
+	StockID    int64     `db:"stock_id"`
+	CreatedBy  int64     `db:"created_user_id"`
+	ModifiedBy int64     `db:"modified_user_id"`
+	CreatedAt  time.Time `db:"created_at"`
+	ModifiedAt time.Time `db:"updated_at"`
+}
+
+type PlasmidName struct {
+	StockID int64  `db:"stock_id"`
+	Name    string `db:"name"`
 }
 
 type User struct {
