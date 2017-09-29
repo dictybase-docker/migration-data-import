@@ -35,7 +35,10 @@ func userAction(c *cli.Context) error {
 			2,
 		)
 	}
-	log := getLogger(c)
+	log, err := getLogger(c, "user")
+	if err != nil {
+		return cli.NewExitError(err.Error(), 2)
+	}
 	filename, err := fetchRemoteFile(c, "users")
 	if err != nil {
 		log.WithFields(logrus.Fields{

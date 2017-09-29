@@ -48,7 +48,10 @@ func validateOnto(c *cli.Context) error {
 }
 
 func ontoAction(c *cli.Context) error {
-	log := getLogger(c)
+	log, err := getLogger(c, "ontology")
+	if err != nil {
+		return cli.NewExitError(err.Error(), 2)
+	}
 	conn, err := getConnection(c)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 2)

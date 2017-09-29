@@ -19,7 +19,10 @@ type cmdFeedback struct {
 }
 
 func LiteratureAction(c *cli.Context) error {
-	log := getLogger(c)
+	log, err := getLogger(c, "literature")
+	if err != nil {
+		return cli.NewExitError(err.Error(), 2)
+	}
 	mi, err := exec.LookPath("modware-import")
 	if err != nil {
 		log.WithFields(logrus.Fields{

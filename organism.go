@@ -43,7 +43,10 @@ func validateOrganismPlus(c *cli.Context) error {
 }
 
 func OrganismPlusAction(c *cli.Context) error {
-	log := getLogger(c)
+	log, err := getLogger(c, "organism-plus")
+	if err != nil {
+		return cli.NewExitError(err.Error(), 2)
+	}
 	if !definedPostgres(c) || !definedChadoUser(c) {
 		log.WithFields(logrus.Fields{
 			"type": "organism-plus-loader",
@@ -90,7 +93,10 @@ func OrganismPlusAction(c *cli.Context) error {
 }
 
 func OrganismAction(c *cli.Context) error {
-	log := getLogger(c)
+	log, err := getLogger(c, "organism")
+	if err != nil {
+		return cli.NewExitError(err.Error(), 2)
+	}
 	dsn := getPostgresDsn(c)
 	mi, err := exec.LookPath("modware-import")
 	if err != nil {

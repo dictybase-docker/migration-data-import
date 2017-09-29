@@ -138,7 +138,10 @@ var annotators = map[string]*User{
 }
 
 func TagInventoryAction(c *cli.Context) error {
-	log := getLogger(c)
+	log, err := getLogger(c, "tag-inventory")
+	if err != nil {
+		return cli.NewExitError(err.Error(), 2)
+	}
 	dat.EnableInterpolation = true
 	// database connection
 	dbh, err := getPgWrapper(c)
@@ -292,7 +295,10 @@ func findDbId(db string, tx *sqlx.Tx) (int64, error) {
 }
 
 func PrefixPlasmidAction(c *cli.Context) error {
-	log := getLogger(c)
+	log, err := getLogger(c, "plasmid-prefix")
+	if err != nil {
+		return cli.NewExitError(err.Error(), 2)
+	}
 	dat.EnableInterpolation = true
 	// database connection
 	dbh, err := getPgWrapper(c)
@@ -363,7 +369,10 @@ func PrefixPlasmidAction(c *cli.Context) error {
 }
 
 func BacterialStrainAction(c *cli.Context) error {
-	log := getLogger(c)
+	log, err := getLogger(c, "bacterial-strain")
+	if err != nil {
+		return cli.NewExitError(err.Error(), 2)
+	}
 	dat.EnableInterpolation = true
 	// database connection
 	dbh, err := getPgWrapper(c)
@@ -449,7 +458,10 @@ func BacterialStrainAction(c *cli.Context) error {
 }
 
 func ScAction(c *cli.Context) error {
-	log := getLogger(c)
+	log, err := getLogger(c, "dsc")
+	if err != nil {
+		return cli.NewExitError(err.Error(), 2)
+	}
 	mi, err := exec.LookPath("modware-import")
 	if err != nil {
 		log.WithFields(logrus.Fields{
@@ -690,7 +702,10 @@ func makeStrainImportCmd(c *cli.Context, folder string) []string {
 }
 
 func ScOrderAction(c *cli.Context) error {
-	log := getLogger(c)
+	log, err := getLogger(c, "dsc-order")
+	if err != nil {
+		return cli.NewExitError(err.Error(), 2)
+	}
 	tmpDir, err := fetchAndDecompress(c, log, "dscorder")
 	if err != nil {
 		return err
@@ -702,7 +717,10 @@ func ScOrderAction(c *cli.Context) error {
 }
 
 func LoadAnnotationAssignment(c *cli.Context) error {
-	log := getLogger(c)
+	log, err := getLogger(c, "annotation-assignment")
+	if err != nil {
+		return cli.NewExitError(err.Error(), 2)
+	}
 	filename, err := fetchRemoteFile(c, "dsc")
 	if err != nil {
 		log.WithFields(logrus.Fields{

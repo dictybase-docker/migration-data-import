@@ -21,7 +21,10 @@ func validateUploadLog(c *cli.Context) error {
 }
 
 func UploadLogAction(c *cli.Context) error {
-	log := getLogger(c)
+	log, err := getLogger(c)
+	if err != nil {
+		return err
+	}
 	zfile := zipFileName("import")
 	if err := zipFiles(c.GlobalString("local-log-path"), zfile); err != nil {
 		log.WithFields(logrus.Fields{
@@ -56,7 +59,7 @@ func zipFileName(prefix string) string {
 	return fmt.Sprintf("%s_%s.zip", prefix, time.Now().Format(layout))
 }
 
-func getLogger(c *cli.Context) *logrus.Logger {
+func getLogger(c *cli.Context, prefix string) (*logrus.Logger, error) {
 	log := logrus.New()
 	switch c.GlobalString("log-format") {
 	case "text":
@@ -68,7 +71,18 @@ func getLogger(c *cli.Context) *logrus.Logger {
 			TimestampFormat: "02/Jan/2006:15:04:05",
 		}
 	}
-	log.Out = os.Stderr
+	if c.IsSet("use-logfile") {
+		if len(prefix) == 0 {
+			prefix = "auto"
+		}
+		w, err := getLogFileName(c, prefix)
+		if err != nil {
+			return log, fmt.Errorf("unable to create log file %s", err)
+		}
+		log.Out = w
+	} else {
+		log.Out = os.Stderr
+	}
 	l := c.GlobalString("log-level")
 	switch l {
 	case "debug":
@@ -97,5 +111,5 @@ func getLogger(c *cli.Context) *logrus.Logger {
 		}
 	}
 	log.Hooks = lh
-	return log
+	return log, nil
 }
