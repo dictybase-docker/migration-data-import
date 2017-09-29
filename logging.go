@@ -21,7 +21,7 @@ func validateUploadLog(c *cli.Context) error {
 }
 
 func UploadLogAction(c *cli.Context) error {
-	log, err := getLogger(c)
+	log, err := getLogger(c, "upload")
 	if err != nil {
 		return err
 	}
@@ -75,9 +75,13 @@ func getLogger(c *cli.Context, prefix string) (*logrus.Logger, error) {
 		if len(prefix) == 0 {
 			prefix = "auto"
 		}
-		w, err := getLogFileName(c, prefix)
+		logName, err := getLogFileName(c, prefix)
 		if err != nil {
-			return log, fmt.Errorf("unable to create log file %s", err)
+			return log, fmt.Errorf("unable to set log file name %s", err)
+		}
+		w, err := os.Create(logName)
+		if err != nil {
+			return log, fmt.Errorf("unable to open log file %s", err)
 		}
 		log.Out = w
 	} else {
